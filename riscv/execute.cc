@@ -219,7 +219,7 @@ bool processor_t::slow_path()
 }
 
 // fetch/decode/execute loop
-void processor_t::step(size_t n)
+void processor_t::step(size_t n, reg_t pmp)
 {
   if (!state.debug_mode) {
     if (halt_request == HR_REGULAR) {
@@ -236,6 +236,8 @@ void processor_t::step(size_t n)
     size_t instret = 0;
     reg_t pc = state.pc;
     mmu_t* _mmu = mmu;
+
+    std::cout << "pmp in execute step " << pmp << "\n";
 
     #define advance_pc() \
      if (unlikely(invalid_pc(pc))) { \
@@ -274,7 +276,7 @@ void processor_t::step(size_t n)
             state.single_step = state.STEP_STEPPED;
           }
 
-          insn_fetch_t fetch = mmu->load_insn(pc);
+          insn_fetch_t fetch = mmu->load_insn(pc, pmp);
           if (debug && !state.serialized)
             disasm(fetch.insn);
           pc = execute_insn(this, pc, fetch);
@@ -284,7 +286,7 @@ void processor_t::step(size_t n)
       else while (instret < n)
       {
         // Main simulation loop, fast path.
-        for (auto ic_entry = _mmu->access_icache(pc); ; ) {
+        for (auto ic_entry = _mmu->access_icache(pc, pmp); ; ) {
           auto fetch = ic_entry->data;
           pc = execute_insn(this, pc, fetch);
           ic_entry = ic_entry->next;
@@ -309,7 +311,7 @@ void processor_t::step(size_t n)
         enter_debug_mode(DCSR_CAUSE_STEP);
       }
     }
-    catch (triggers::matched_t& t)
+    catch (trigger_matched_t& t)
     {
       if (mmu->matched_trigger) {
         // This exception came from the MMU. That means the instruction hasn't
@@ -317,18 +319,18 @@ void processor_t::step(size_t n)
         // an exception because matched_trigger is already set. (All memory
         // instructions are idempotent so restarting is safe.)
 
-        insn_fetch_t fetch = mmu->load_insn(pc);
+        insn_fetch_t fetch = mmu->load_insn(pc, pmp);
         pc = execute_insn(this, pc, fetch);
         advance_pc();
 
         delete mmu->matched_trigger;
         mmu->matched_trigger = NULL;
       }
-      switch (t.action) {
-        case triggers::ACTION_DEBUG_MODE:
+      switch (state.mcontrol[t.index].action) {
+        case ACTION_DEBUG_MODE:
           enter_debug_mode(DCSR_CAUSE_HWBP);
           break;
-        case triggers::ACTION_DEBUG_EXCEPTION: {
+        case ACTION_DEBUG_EXCEPTION: {
           trap_breakpoint trap(state.v, t.address);
           take_trap(trap, pc);
           break;

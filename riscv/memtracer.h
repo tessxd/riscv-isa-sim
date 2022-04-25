@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string.h>
 #include <vector>
+#include "decode.h"
 
 enum access_type {
   LOAD,
@@ -20,8 +21,8 @@ class memtracer_t
   virtual ~memtracer_t() {}
 
   virtual bool interested_in_range(uint64_t begin, uint64_t end, access_type type) = 0;
-  virtual void trace(uint64_t addr, size_t bytes, access_type type) = 0;
-  virtual void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval) = 0;
+  virtual void trace(uint64_t addr, size_t bytes, access_type type, reg_t pmp) = 0;
+  virtual void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval, reg_t pmp) = 0;
 };
 
 class memtracer_list_t : public memtracer_t
@@ -35,15 +36,15 @@ class memtracer_list_t : public memtracer_t
         return true;
     return false;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  void trace(uint64_t addr, size_t bytes, access_type type, reg_t pmp)
   {
     for (auto it: list)
-      it->trace(addr, bytes, type);
+      it->trace(addr, bytes, type, pmp);
   }
-  void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval)
+  void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval, reg_t pmp)
   {
     for (auto it: list)
-      it->clean_invalidate(addr, bytes, clean, inval);
+      it->clean_invalidate(addr, bytes, clean, inval, pmp);
   }
   void hook(memtracer_t* h)
   {

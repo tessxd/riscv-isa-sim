@@ -26,8 +26,8 @@ class cache_sim_t
   cache_sim_t(const cache_sim_t& rhs);
   virtual ~cache_sim_t();
 
-  void access(uint64_t addr, size_t bytes, bool store);
-  void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval);
+  void access(uint64_t addr, size_t bytes, bool store, reg_t pmp);
+  void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval, reg_t pmp);
   void print_stats();
   void set_miss_handler(cache_sim_t* mh) { miss_handler = mh; }
   void set_log(bool _log) { log = _log; }
@@ -38,7 +38,7 @@ class cache_sim_t
   static const uint64_t VALID = 1ULL << 63;
   static const uint64_t DIRTY = 1ULL << 62;
 
-  virtual uint64_t* check_tag(uint64_t addr);
+  virtual uint64_t* check_tag(uint64_t addr, reg_t pmp);
   virtual uint64_t victimize(uint64_t addr);
 
   lfsr_t lfsr;
@@ -50,6 +50,7 @@ class cache_sim_t
   size_t idx_shift;
 
   uint64_t* tags;
+  uint8_t* pmp_tags;
   
   uint64_t read_accesses;
   uint64_t read_misses;
@@ -69,7 +70,7 @@ class fa_cache_sim_t : public cache_sim_t
 {
  public:
   fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
-  uint64_t* check_tag(uint64_t addr);
+  uint64_t* check_tag(uint64_t addr, reg_t pmp);
   uint64_t victimize(uint64_t addr);
  private:
   static bool cmp(uint64_t a, uint64_t b);
@@ -91,9 +92,9 @@ class cache_memtracer_t : public memtracer_t
   {
     cache->set_miss_handler(mh);
   }
-  void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval)
+  void clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval, reg_t pmp)
   {
-    cache->clean_invalidate(addr, bytes, clean, inval);
+    cache->clean_invalidate(addr, bytes, clean, inval, pmp);
   }
   void set_log(bool log)
   {
@@ -112,9 +113,9 @@ class icache_sim_t : public cache_memtracer_t
   {
     return type == FETCH;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  void trace(uint64_t addr, size_t bytes, access_type type, reg_t pmp)
   {
-    if (type == FETCH) cache->access(addr, bytes, false);
+    if (type == FETCH) cache->access(addr, bytes, false, pmp);
   }
 };
 
@@ -126,9 +127,9 @@ class dcache_sim_t : public cache_memtracer_t
   {
     return type == LOAD || type == STORE;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  void trace(uint64_t addr, size_t bytes, access_type type, reg_t pmp)
   {
-    if (type == LOAD || type == STORE) cache->access(addr, bytes, type == STORE);
+    if (type == LOAD || type == STORE) cache->access(addr, bytes, type == STORE, pmp);
   }
 };
 

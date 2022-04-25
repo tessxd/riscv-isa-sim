@@ -6,6 +6,8 @@
 #include <iostream>
 #include <iomanip>
 
+// TODO: include csr? 
+
 cache_sim_t::cache_sim_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name)
 : sets(_sets), ways(_ways), linesz(_linesz), name(_name), log(false)
 {
@@ -49,6 +51,7 @@ void cache_sim_t::init()
     idx_shift++;
 
   tags = new uint64_t[sets*ways]();
+  pmp_tags = new uint8_t[sets*ways];
   read_accesses = 0;
   read_misses = 0;
   bytes_read = 0;
@@ -60,11 +63,15 @@ void cache_sim_t::init()
   miss_handler = NULL;
 }
 
+// TODO: set pmp tags to pmp entries from threads 
+// TODO: check pmp tag for permissions
+
 cache_sim_t::cache_sim_t(const cache_sim_t& rhs)
  : sets(rhs.sets), ways(rhs.ways), linesz(rhs.linesz),
    idx_shift(rhs.idx_shift), name(rhs.name), log(false)
 {
   tags = new uint64_t[sets*ways];
+  pmp_tags = new uint8_t[sets*ways]; 
   memcpy(tags, rhs.tags, sets*ways*sizeof(uint64_t));
 }
 
@@ -100,18 +107,23 @@ void cache_sim_t::print_stats()
   std::cout << "Miss Rate:             " << mr << '%' << std::endl;
 }
 
-uint64_t* cache_sim_t::check_tag(uint64_t addr)
+//TODO: update to check pmp tag whatever thread is also of the same pmp,
+// pass into simulator which enclave is running
+// tag comes from address we're accessing, but we need tag from thread that we're running
+// csr_write(sstatus, csr_read(sstatus) | 0x6000);
+
+uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp)
 {
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
   for (size_t i = 0; i < ways; i++)
-    if (tag == (tags[idx*ways + i] & ~DIRTY))
+    if (tag == (tags[idx*ways + i] & ~DIRTY)) //TODO: add pmp check to make sure pmp matches thread 
       return &tags[idx*ways + i];
 
   return NULL;
 }
-
+ 
 uint64_t cache_sim_t::victimize(uint64_t addr)
 {
   size_t idx = (addr >> idx_shift) & (sets-1);
@@ -121,12 +133,12 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
   return victim;
 }
 
-void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
+void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
 {
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
 
-  uint64_t* hit_way = check_tag(addr);
+  uint64_t* hit_way = check_tag(addr, pmp);
   if (likely(hit_way != NULL))
   {
     if (store)
@@ -142,30 +154,31 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
               << std::hex << addr << std::endl;
   }
 
+  //TODO: only victimize addr if in the same enclave as thread 
   uint64_t victim = victimize(addr);
 
   if ((victim & (VALID | DIRTY)) == (VALID | DIRTY))
   {
     uint64_t dirty_addr = (victim & ~(VALID | DIRTY)) << idx_shift;
     if (miss_handler)
-      miss_handler->access(dirty_addr, linesz, true);
+      miss_handler->access(dirty_addr, linesz, true, pmp);
     writebacks++;
   }
 
   if (miss_handler)
-    miss_handler->access(addr & ~(linesz-1), linesz, false);
+    miss_handler->access(addr & ~(linesz-1), linesz, false, pmp);
 
   if (store)
-    *check_tag(addr) |= DIRTY;
+    *check_tag(addr, pmp) |= DIRTY;
 }
 
-void cache_sim_t::clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval)
+void cache_sim_t::clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval, reg_t pmp)
 {
   uint64_t start_addr = addr & ~(linesz-1);
   uint64_t end_addr = (addr + bytes + linesz-1) & ~(linesz-1);
   uint64_t cur_addr = start_addr;
   while (cur_addr < end_addr) {
-    uint64_t* hit_way = check_tag(cur_addr);
+    uint64_t* hit_way = check_tag(cur_addr, pmp);
     if (likely(hit_way != NULL))
     {
       if (clean) {
@@ -181,7 +194,7 @@ void cache_sim_t::clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool
     cur_addr += linesz;
   }
   if (miss_handler)
-    miss_handler->clean_invalidate(addr, bytes, clean, inval);
+    miss_handler->clean_invalidate(addr, bytes, clean, inval, pmp);
 }
 
 fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
@@ -189,7 +202,7 @@ fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
 {
 }
 
-uint64_t* fa_cache_sim_t::check_tag(uint64_t addr)
+uint64_t* fa_cache_sim_t::check_tag(uint64_t addr, reg_t pmp)
 {
   auto it = tags.find(addr >> idx_shift);
   return it == tags.end() ? NULL : &it->second;

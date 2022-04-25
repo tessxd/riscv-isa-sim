@@ -56,11 +56,8 @@ typedef enum {
   IMPL_MMU_SV32,
   IMPL_MMU_SV39,
   IMPL_MMU_SV48,
-  IMPL_MMU_SV57,
   IMPL_MMU_SBARE,
   IMPL_MMU,
-  IMPL_MMU_VMID,
-  IMPL_MMU_ASID,
 } impl_extension_t;
 
 class isa_parser_t {

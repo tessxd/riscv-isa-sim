@@ -28,10 +28,11 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
-sim_t::sim_t(const cfg_t *cfg, bool halted,
-             std::vector<std::pair<reg_t, mem_t*>> mems,
+sim_t::sim_t(const cfg_t *cfg, const char* varch, bool halted, bool real_time_clint,
+             reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems,
              std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
              const std::vector<std::string>& args,
+             std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
              bool dtb_enabled, const char *dtb_file,
@@ -45,6 +46,7 @@ sim_t::sim_t(const cfg_t *cfg, bool halted,
     mems(mems),
     plugin_devices(plugin_devices),
     procs(std::max(cfg->nprocs(), size_t(1))),
+    start_pc(start_pc),
     dtb_file(dtb_file ? dtb_file : ""),
     dtb_enabled(dtb_enabled),
     log_file(log_path),
@@ -76,9 +78,19 @@ sim_t::sim_t(const cfg_t *cfg, bool halted,
 
   debug_mmu = new mmu_t(this, NULL);
 
-  for (size_t i = 0; i < cfg->nprocs(); i++) {
-    procs[i] = new processor_t(&isa, cfg->varch(), this, cfg->hartids()[i], halted,
+  if (! (hartids.empty() || hartids.size() == nprocs())) {
+      std::cerr << "Number of specified hartids ("
+                << hartids.size()
+                << ") doesn't match number of processors ("
+                << nprocs() << ").\n";
+      exit(1);
+  }
+
+  for (size_t i = 0; i < nprocs(); i++) {
+    int hart_id = hartids.empty() ? i : hartids[i];
+    procs[i] = new processor_t(isa, varch, this, hart_id, halted,
                                log_file.get(), sout_);
+    std::cout << "hart id" << hart_id << "\n"; //DEBUG PRINT
   }
 
   make_dtb();
@@ -94,7 +106,7 @@ sim_t::sim_t(const cfg_t *cfg, bool halted,
   // setting the dtb_file argument has one.
   reg_t clint_base;
   if (fdt_parse_clint(fdt, &clint_base, "riscv,clint0") == 0) {
-    clint.reset(new clint_t(procs, CPU_HZ / INSNS_PER_RTC_TICK, cfg->real_time_clint()));
+    clint.reset(new clint_t(procs, CPU_HZ / INSNS_PER_RTC_TICK, real_time_clint));
     bus.add_device(clint_base, clint.get());
   }
 
@@ -116,9 +128,10 @@ sim_t::sim_t(const cfg_t *cfg, bool halted,
     if (fdt_parse_pmp_num(fdt, cpu_offset, &pmp_num) == 0) {
       if (pmp_num <= 64) {
         procs[cpu_idx]->set_pmp_num(pmp_num);
+        std::cout << "the pmp " << pmp_num << "\n"; //DEBUG PRINT
       } else {
         std::cerr << "core ("
-                  << cpu_idx
+                  << hartids.size()
                   << ") doesn't have valid 'riscv,pmpregions'"
                   << pmp_num << ").\n";
         exit(1);
@@ -142,13 +155,11 @@ sim_t::sim_t(const cfg_t *cfg, bool halted,
         procs[cpu_idx]->set_mmu_capability(IMPL_MMU_SV39);
       } else if (strncmp(mmu_type, "riscv,sv48", strlen("riscv,sv48")) == 0) {
         procs[cpu_idx]->set_mmu_capability(IMPL_MMU_SV48);
-      } else if (strncmp(mmu_type, "riscv,sv57", strlen("riscv,sv57")) == 0) {
-        procs[cpu_idx]->set_mmu_capability(IMPL_MMU_SV57);
       } else if (strncmp(mmu_type, "riscv,sbare", strlen("riscv,sbare")) == 0) {
         //has been set in the beginning
       } else {
         std::cerr << "core ("
-                  << cpu_idx
+                  << hartids.size()
                   << ") has an invalid 'mmu-type': "
                   << mmu_type << ").\n";
         exit(1);
@@ -207,10 +218,13 @@ int sim_t::run()
 
 void sim_t::step(size_t n)
 {
+  reg_t pmp = procs[current_proc]->n_pmp;
   for (size_t i = 0, steps = 0; i < n; i += steps)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
-    procs[current_proc]->step(steps);
+    procs[current_proc]->step(steps,pmp);
+
+    std::cout << "pmp in step " << procs[current_proc]->n_pmp << "\n"; // DEBUG PRINT
 
     current_step += steps;
     if (current_step == INTERLEAVE)
@@ -323,7 +337,7 @@ void sim_t::set_rom()
 {
   const int reset_vec_size = 8;
 
-  reg_t start_pc = cfg->start_pc.value_or(get_entry_point());
+  start_pc = start_pc == reg_t(-1) ? get_entry_point() : start_pc;
 
   uint32_t reset_vec[reset_vec_size] = {
     0x297,                                      // auipc  t0,0x0

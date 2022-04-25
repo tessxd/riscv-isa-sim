@@ -299,7 +299,6 @@ class misa_csr_t final: public basic_csr_t {
  private:
   const reg_t max_isa;
   const reg_t write_mask;
-  const reg_t dependency(const reg_t val, const char feature, const char depends_on) const noexcept;
 };
 
 typedef std::shared_ptr<misa_csr_t> misa_csr_t_p;
@@ -575,10 +574,13 @@ class tdata1_csr_t: public csr_t {
 
 class tdata2_csr_t: public csr_t {
  public:
-  tdata2_csr_t(processor_t* const proc, const reg_t addr);
+  tdata2_csr_t(processor_t* const proc, const reg_t addr, const size_t count);
   virtual reg_t read() const noexcept override;
+  reg_t read(const size_t idx) const noexcept;
  protected:
   virtual bool unlogged_write(const reg_t val) noexcept override;
+ private:
+  std::vector<reg_t> vals;
 };
 
 // For CSRs that are only writable from debug mode
