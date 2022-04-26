@@ -6,8 +6,6 @@
 #include <iostream>
 #include <iomanip>
 
-// TODO: include csr? 
-
 cache_sim_t::cache_sim_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name)
 : sets(_sets), ways(_ways), linesz(_linesz), name(_name), log(false)
 {
@@ -63,9 +61,6 @@ void cache_sim_t::init()
   miss_handler = NULL;
 }
 
-// TODO: set pmp tags to pmp entries from threads 
-// TODO: check pmp tag for permissions
-
 cache_sim_t::cache_sim_t(const cache_sim_t& rhs)
  : sets(rhs.sets), ways(rhs.ways), linesz(rhs.linesz),
    idx_shift(rhs.idx_shift), name(rhs.name), log(false)
@@ -117,8 +112,13 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp)
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
+  std::cout << "check tag pmp " << pmp << "\n";
+  reg_t curr_core = 0; //DEBUG magic number
+  if (pmp != curr_core) //pmp check to make sure pmp matches current core
+    return NULL;
+  
   for (size_t i = 0; i < ways; i++)
-    if (tag == (tags[idx*ways + i] & ~DIRTY)) //TODO: add pmp check to make sure pmp matches thread 
+    if (tag == (tags[idx*ways + i] & ~DIRTY))  
       return &tags[idx*ways + i];
 
   return NULL;

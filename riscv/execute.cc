@@ -237,7 +237,7 @@ void processor_t::step(size_t n, reg_t pmp)
     reg_t pc = state.pc;
     mmu_t* _mmu = mmu;
 
-    std::cout << "pmp in execute step " << pmp << "\n";
+    // std::cout << "pmp in execute step " << pmp << "\n"; //DEBUG PRINT
 
     #define advance_pc() \
      if (unlikely(invalid_pc(pc))) { \

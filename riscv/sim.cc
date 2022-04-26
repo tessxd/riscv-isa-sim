@@ -90,7 +90,10 @@ sim_t::sim_t(const cfg_t *cfg, const char* varch, bool halted, bool real_time_cl
     int hart_id = hartids.empty() ? i : hartids[i];
     procs[i] = new processor_t(isa, varch, this, hart_id, halted,
                                log_file.get(), sout_);
-    std::cout << "hart id" << hart_id << "\n"; //DEBUG PRINT
+    std::cout << "hart id " << hart_id << "\n"; //DEBUG PRINT
+    std::cout << "pmp " << procs[i]->n_pmp << "\n";
+    std::cout << "pmp " << procs[i]->get_id() << "\n"; 
+    std::cout << "hart id " << i << "\n";
   }
 
   make_dtb();
@@ -129,6 +132,11 @@ sim_t::sim_t(const cfg_t *cfg, const char* varch, bool halted, bool real_time_cl
       if (pmp_num <= 64) {
         procs[cpu_idx]->set_pmp_num(pmp_num);
         std::cout << "the pmp " << pmp_num << "\n"; //DEBUG PRINT
+        std::cout << "cput idx " << cpu_idx << "\n";
+        std::cout << "core ("
+                  << hartids.size()
+                  << ") 'riscv,pmpregions'"
+                  << pmp_num << ").\n";
       } else {
         std::cerr << "core ("
                   << hartids.size()
@@ -218,13 +226,13 @@ int sim_t::run()
 
 void sim_t::step(size_t n)
 {
-  reg_t pmp = procs[current_proc]->n_pmp;
+  reg_t pmp = procs[current_proc]->get_id();
   for (size_t i = 0, steps = 0; i < n; i += steps)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
     procs[current_proc]->step(steps,pmp);
 
-    std::cout << "pmp in step " << procs[current_proc]->n_pmp << "\n"; // DEBUG PRINT
+    //std::cout << "pmp in step " << procs[current_proc]->n_pmp << "\n"; // DEBUG PRINT
 
     current_step += steps;
     if (current_step == INTERLEAVE)

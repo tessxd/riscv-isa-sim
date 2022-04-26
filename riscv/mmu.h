@@ -255,8 +255,8 @@ public:
 
     reg_t pmp = 0; //DEBUG TEMP MAGIC NUMBER
     if (proc != NULL) { 
-      pmp = proc->n_pmp;
-      std::cout << "do i ever get here" << "\n";
+      pmp = proc->get_id();
+      std::cout << "do i ever get here... pmp " << pmp << "\n";
     } 
     convert_load_traps_to_store_traps({
       reg_t paddr = addr & ~(blocksz - 1);

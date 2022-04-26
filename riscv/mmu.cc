@@ -145,8 +145,8 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
 
   reg_t pmp = 0; //DEBUG TEMP MAGIC NUMBER
   if (proc != NULL) { 
-    pmp = proc->n_pmp;
-    std::cout << "do i ever get here" << "\n";
+    pmp = proc->get_id();
+    std::cout << "do i ever get here...pmp " << pmp << "\n";
   } 
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
