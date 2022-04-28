@@ -294,6 +294,8 @@ void processor_t::step(size_t n, reg_t pmp)
             break;
           if (unlikely(instret + 1 == n))
             break;
+          if (pmp != 0) //added pmp check for the main simulation loop 
+            break;
           instret++;
           state.pc = pc;
         }

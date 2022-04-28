@@ -9,7 +9,7 @@ import pandas as pd
 # Cache Parameter Options (bytes)
 cache_sizes = [1024, 2048]
 cache_ways = [1] #, 2, 4, 8]
-cache_lines = [32, 64, 128]
+cache_lines = [8, 16, 32, 64, 128, 256]
 cache_blocks = [8] #size of at least 8 
 
 # Data frame to store results
@@ -40,10 +40,21 @@ for cache_size in cache_sizes:
 # TODO: plot outputs 
 print data_df
 oneMB_df = data_df[data_df['Cache Size']==1024]
-twoMB_df = data_df[data_df['Cache Size']==2028]
+twoMB_df = data_df[data_df['Cache Size']==2048]
+print twoMB_df
 
-plt.plot(oneMB_df['Cache Line Size'],oneMB_df['Miss Rate'])
-plt.savefig('test.png')
+fig1 = plt.figure()
+plt.plot(oneMB_df['Cache Line Size'],oneMB_df['Miss Rate'], label='1MB Cache')
+plt.plot(twoMB_df['Cache Line Size'],twoMB_df['Miss Rate'], label='2MB Cache')
+plt.title('Miss Rate vs. Cache Line Size')
+plt.ylabel('Miss Rate')
+plt.xlabel('Cache Line Size (bytes)')
+plt.legend()
+fig1.savefig('figure1.png')
+plt.close()
 
+
+#fig2 = plt.figure()
+#plt.close()
 
 

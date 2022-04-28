@@ -232,7 +232,9 @@ void sim_t::step(size_t n)
     steps = std::min(n - i, INTERLEAVE - current_step);
     procs[current_proc]->step(steps,pmp);
 
-    //std::cout << "pmp in step " << procs[current_proc]->n_pmp << "\n"; // DEBUG PRINT
+
+    std::cout << "pmp in step " << pmp << "\n"; // DEBUG PRINT
+    std::cout << "steps " << steps << "\n";
 
     current_step += steps;
     if (current_step == INTERLEAVE)

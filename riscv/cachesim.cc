@@ -155,6 +155,7 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
   }
 
   //TODO: only victimize addr if in the same enclave as thread 
+  
   uint64_t victim = victimize(addr);
 
   if ((victim & (VALID | DIRTY)) == (VALID | DIRTY))
