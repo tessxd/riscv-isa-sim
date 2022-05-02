@@ -176,7 +176,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   // TODO: figure out what the debug_mmu is doing??
   reg_t pmp = 0; // DEBUG TEMP MAGIC NUMBER
   if (proc != NULL) { 
-    pmp = proc->n_pmp;
+    pmp = proc->get_id();
     std::cout << "do i ever get here" << "\n";
   } 
   
