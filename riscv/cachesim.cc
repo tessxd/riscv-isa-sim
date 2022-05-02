@@ -112,10 +112,14 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp)
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
-  std::cout << "check tag pmp " << pmp << "\n";
+  //std::cout << "check tag pmp " << pmp << "\n";
   reg_t curr_core = 0; //DEBUG magic number
-  if (pmp != curr_core) //pmp check to make sure pmp matches current core
+  // if (pmp == curr_core) 
+    //std::cout << "passed pmp check" << "\n";
+  if (pmp != curr_core) { //pmp check to make sure pmp matches current core
+    //std::cout << "failed pmp check" << "\n";
     return NULL;
+  }
   
   for (size_t i = 0; i < ways; i++)
     if (tag == (tags[idx*ways + i] & ~DIRTY))  
@@ -152,9 +156,7 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
     std::cerr << name << " "
               << (store ? "write" : "read") << " miss 0x"
               << std::hex << addr << std::endl;
-  }
-
-  //TODO: only victimize addr if in the same enclave as thread 
+  } 
   
   uint64_t victim = victimize(addr);
 

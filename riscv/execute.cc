@@ -237,7 +237,7 @@ void processor_t::step(size_t n, reg_t pmp)
     reg_t pc = state.pc;
     mmu_t* _mmu = mmu;
 
-    // std::cout << "pmp in execute step " << pmp << "\n"; //DEBUG PRINT
+    //std::cout << "pmp in execute step " << pmp << "\n"; //DEBUG PRINT
 
     #define advance_pc() \
      if (unlikely(invalid_pc(pc))) { \
@@ -261,6 +261,7 @@ void processor_t::step(size_t n, reg_t pmp)
       if (unlikely(slow_path()))
       {
         // Main simulation loop, slow path.
+        //std::cout << "slow path in execute" << "\n";
         while (instret < n)
         {
           if (unlikely(!state.serialized && state.single_step == state.STEP_STEPPED)) {
@@ -286,6 +287,7 @@ void processor_t::step(size_t n, reg_t pmp)
       else while (instret < n)
       {
         // Main simulation loop, fast path.
+        //std::cout << "fast path in execute " << "\n";
         for (auto ic_entry = _mmu->access_icache(pc, pmp); ; ) {
           auto fetch = ic_entry->data;
           pc = execute_insn(this, pc, fetch);
@@ -294,8 +296,8 @@ void processor_t::step(size_t n, reg_t pmp)
             break;
           if (unlikely(instret + 1 == n))
             break;
-          if (pmp != 0) //added pmp check for the main simulation loop 
-            break;
+          //if (pmp != 0) //added pmp check for the main simulation loop TODO take this out
+          //  break;
           instret++;
           state.pc = pc;
         }

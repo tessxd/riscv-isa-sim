@@ -361,8 +361,8 @@ public:
     icache_entry_t* entry = &icache[icache_index(addr)];
     if (likely(entry->tag == addr)) 
       return entry;
-    if (pmp != 0)
-      return entry; //pmp tag check
+    //if (pmp != 0)
+    //  return entry; //pmp tag check
     return refill_icache(addr, entry, pmp); //pass in pmp tag 
   }
 

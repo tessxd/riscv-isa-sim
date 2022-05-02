@@ -143,16 +143,19 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
 {
   reg_t paddr = translate(addr, len, LOAD, xlate_flags);
 
-  reg_t pmp = 0; //DEBUG TEMP MAGIC NUMBER
-  if (proc != NULL) { 
-    pmp = proc->get_id();
-    std::cout << "do i ever get here...pmp " << pmp << "\n";
-  } 
+  //reg_t pmp = 0; //DEBUG TEMP MAGIC NUMBER
+  //if (proc != NULL) { 
+    //pmp = proc->get_id();
+    //std::cout << "do i ever get here...pmp " << pmp << "\n";
+  //} 
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     memcpy(bytes, host_addr, len);
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD)) {
-      std::cout << "pmp in load slow path " << pmp << "\n";
+      reg_t pmp = proc->get_id(); // debug print
+      //std::cout << "pmp in load slow path " << pmp << "\n";
+      if (pmp == 1)
+        std::cout << "yessss" << "\n";
       tracer.trace(paddr, len, LOAD, pmp);
     }
     else if (xlate_flags == 0)
@@ -174,11 +177,11 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
   
   // TODO: figure out what the debug_mmu is doing??
-  reg_t pmp = 0; // DEBUG TEMP MAGIC NUMBER
-  if (proc != NULL) { 
-    pmp = proc->get_id();
-    std::cout << "do i ever get here" << "\n";
-  } 
+  //reg_t pmp = 0; // DEBUG TEMP MAGIC NUMBER
+  //if (proc != NULL) { 
+    //pmp = proc->get_id();
+    //std::cout << "do i ever get here" << "\n";
+  //} 
   
   if (!matched_trigger) {
     reg_t data = reg_from_bytes(len, bytes);
@@ -190,7 +193,10 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     memcpy(host_addr, bytes, len);
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE)) {
-      std::cout << "pmp in store slow path " << pmp << "\n";
+      reg_t pmp = proc->get_id(); // debug print
+      //std::cout << "pmp in store slow path " << pmp << "\n";
+      if (pmp == 1)
+        std::cout << "yessss" << "\n";
       tracer.trace(paddr, len, STORE, pmp);
     }
     else if (xlate_flags == 0)
