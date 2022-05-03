@@ -234,7 +234,7 @@ void sim_t::step(size_t n)
     procs[current_proc]->step(steps,pmp);
 
 
-    std::cout << "pmp in step " << pmp << "\n"; // DEBUG PRINT
+    //std::cout << "pmp in step " << pmp << "\n"; // DEBUG PRINT
 
     current_step += steps;
     if (current_step == INTERLEAVE)

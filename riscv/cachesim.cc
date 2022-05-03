@@ -171,7 +171,10 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
   if (miss_handler)
     miss_handler->access(addr & ~(linesz-1), linesz, false, pmp);
 
-  if (store)
+  if (pmp == 1 && store)
+    std::cout << "testing this" << "\n";
+ 
+  if (store && pmp == 0) //added pmp check to set as dirty 
     *check_tag(addr, pmp) |= DIRTY;
 }
 
