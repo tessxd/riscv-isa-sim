@@ -38,8 +38,8 @@ class cache_sim_t
   static const uint64_t VALID = 1ULL << 63;
   static const uint64_t DIRTY = 1ULL << 62;
 
-  virtual uint64_t* check_tag(uint64_t addr, reg_t pmp);
-  virtual uint64_t victimize(uint64_t addr);
+  virtual uint64_t* check_tag(uint64_t addr, reg_t pmp, std::string name);
+  virtual uint64_t victimize(uint64_t addr, reg_t pmp);
 
   lfsr_t lfsr;
   cache_sim_t* miss_handler;
@@ -50,7 +50,7 @@ class cache_sim_t
   size_t idx_shift;
 
   uint64_t* tags;
-  uint8_t* pmp_tags;
+  uint64_t* pmp_tags;
   
   uint64_t read_accesses;
   uint64_t read_misses;

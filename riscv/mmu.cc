@@ -159,8 +159,8 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
       //}
       //reg_t pmp = proc->get_id(); // debug print
       //std::cout << "pmp in load slow path " << pmp << "\n";
-      if (pmp == 1)
-        std::cout << "load slow path pmp 1" << "\n";
+      //if (pmp == 1)
+        //std::cout << "load slow path pmp 1" << "\n";
       tracer.trace(paddr, len, LOAD, pmp);
     }
     else if (xlate_flags == 0)
@@ -205,9 +205,9 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
       //  pmp = proc->get_id();
       //}
       
-      if (pmp == 1) {
-        std::cout << "store slow path pmp 1 " << "\n";
-      }
+      //if (pmp == 1) {
+      //  std::cout << "store slow path pmp 1 " << "\n";
+      //}
       tracer.trace(paddr, len, STORE, pmp);
     }
     else if (xlate_flags == 0)

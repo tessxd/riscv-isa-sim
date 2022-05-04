@@ -49,7 +49,7 @@ void cache_sim_t::init()
     idx_shift++;
 
   tags = new uint64_t[sets*ways]();
-  pmp_tags = new uint8_t[sets*ways];
+  pmp_tags = new uint64_t[sets*ways]();
   read_accesses = 0;
   read_misses = 0;
   bytes_read = 0;
@@ -66,13 +66,15 @@ cache_sim_t::cache_sim_t(const cache_sim_t& rhs)
    idx_shift(rhs.idx_shift), name(rhs.name), log(false)
 {
   tags = new uint64_t[sets*ways];
-  pmp_tags = new uint8_t[sets*ways]; 
+  pmp_tags = new uint64_t[sets*ways]; 
   memcpy(tags, rhs.tags, sets*ways*sizeof(uint64_t));
+  memcpy(pmp_tags, rhs.pmp_tags, sets*ways*sizeof(uint64_t));
 }
 
 cache_sim_t::~cache_sim_t()
 {
   print_stats();
+  delete [] pmp_tags;
   delete [] tags;
 }
 
@@ -107,33 +109,45 @@ void cache_sim_t::print_stats()
 // tag comes from address we're accessing, but we need tag from thread that we're running
 // csr_write(sstatus, csr_read(sstatus) | 0x6000);
 
-uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp)
+uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp, std::string name)
 {
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
   //std::cout << "check tag pmp " << pmp << "\n";
-  reg_t curr_core = 0; //DEBUG magic number
+   //DEBUG magic number
   // if (pmp == curr_core) 
     //std::cout << "passed pmp check" << "\n";
-  if (pmp != curr_core) { //pmp check to make sure pmp matches current core
-    //std::cout << "failed pmp check" << "\n";
-    return NULL;
-  }
-  
-  for (size_t i = 0; i < ways; i++)
-    if (tag == (tags[idx*ways + i] & ~DIRTY))  
-      return &tags[idx*ways + i];
+  //if (pmp != curr_core && name == "L2$") { //pmp check to make sure pmp matches current core
+  //  std::cout << "failed pmp check" << "\n";
+  //  return NULL;
+  //}
 
+  //current core need to be the pmp tag that is stored 
+  if (pmp == 1) {
+    std::cout << "idx: " << idx << "tag: " << tag << "\n";
+  }
+  for (size_t i = 0; i < ways; i++) {
+    //std::cout << "idx: "<< idx << "; way: " << i << "\n";
+    //std::cout << "name " << name << "; pmp " << pmp << "; pmp_tag output " << pmp_tags[idx*ways + i] << "\n";
+    if ((name == "L2$") && (pmp != pmp_tags[idx*ways + i]))
+      continue;
+    if (tag == (tags[idx*ways + i] & ~DIRTY) )  
+      return &tags[idx*ways + i];
+  }
+
+  std::cout << "pmp at miss " << pmp << "\n";
   return NULL;
 }
  
-uint64_t cache_sim_t::victimize(uint64_t addr)
+uint64_t cache_sim_t::victimize(uint64_t addr, reg_t pmp)
 {
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t way = lfsr.next() % ways;
   uint64_t victim = tags[idx*ways + way];
   tags[idx*ways + way] = (addr >> idx_shift) | VALID;
+  pmp_tags[idx*ways + way] = pmp; 
+  //std::cout << "pmp: " << pmp << "; idx: "<< idx << "; way: " << way << "\n";
   return victim;
 }
 
@@ -142,13 +156,15 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
 
-  uint64_t* hit_way = check_tag(addr, pmp);
+  uint64_t* hit_way = check_tag(addr, pmp, name);
   if (likely(hit_way != NULL))
   {
     if (store)
       *hit_way |= DIRTY;
     return;
   }
+
+  //std::cout << name << "\n";
 
   store ? write_misses++ : read_misses++;
   if (log)
@@ -158,7 +174,7 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
               << std::hex << addr << std::endl;
   } 
   
-  uint64_t victim = victimize(addr);
+  uint64_t victim = victimize(addr, pmp);
 
   if ((victim & (VALID | DIRTY)) == (VALID | DIRTY))
   {
@@ -174,8 +190,8 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, reg_t pmp)
   if (pmp == 1 && store)
     std::cout << "testing this" << "\n";
  
-  if (store && pmp == 0) //added pmp check to set as dirty 
-    *check_tag(addr, pmp) |= DIRTY;
+  if (store) 
+    *check_tag(addr, pmp, name) |= DIRTY;
 }
 
 void cache_sim_t::clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool inval, reg_t pmp)
@@ -184,7 +200,7 @@ void cache_sim_t::clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool
   uint64_t end_addr = (addr + bytes + linesz-1) & ~(linesz-1);
   uint64_t cur_addr = start_addr;
   while (cur_addr < end_addr) {
-    uint64_t* hit_way = check_tag(cur_addr, pmp);
+    uint64_t* hit_way = check_tag(cur_addr, pmp, name);
     if (likely(hit_way != NULL))
     {
       if (clean) {
@@ -203,6 +219,8 @@ void cache_sim_t::clean_invalidate(uint64_t addr, size_t bytes, bool clean, bool
     miss_handler->clean_invalidate(addr, bytes, clean, inval, pmp);
 }
 
+
+//TODO: make sure these are never used functions in our simulation
 fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
   : cache_sim_t(1, ways, linesz, name)
 {
