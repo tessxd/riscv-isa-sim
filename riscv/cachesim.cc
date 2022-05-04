@@ -124,9 +124,9 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp, std::string name)
   //}
 
   //current core need to be the pmp tag that is stored 
-  if (pmp == 1) {
-    std::cout << "idx: " << idx << "tag: " << tag << "\n";
-  }
+  //if (pmp == 1) {
+  //  std::cout << "idx: " << idx << "tag: " << tag << "\n";
+  //}
   for (size_t i = 0; i < ways; i++) {
     //std::cout << "idx: "<< idx << "; way: " << i << "\n";
     //std::cout << "name " << name << "; pmp " << pmp << "; pmp_tag output " << pmp_tags[idx*ways + i] << "\n";
@@ -136,7 +136,7 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr, reg_t pmp, std::string name)
       return &tags[idx*ways + i];
   }
 
-  std::cout << "pmp at miss " << pmp << "\n";
+  //std::cout << "pmp at miss " << pmp << "\n";
   return NULL;
 }
  
@@ -147,7 +147,9 @@ uint64_t cache_sim_t::victimize(uint64_t addr, reg_t pmp)
   uint64_t victim = tags[idx*ways + way];
   tags[idx*ways + way] = (addr >> idx_shift) | VALID;
   pmp_tags[idx*ways + way] = pmp; 
-  //std::cout << "pmp: " << pmp << "; idx: "<< idx << "; way: " << way << "\n";
+  
+  if (pmp == 1)
+    std::cout << "pmp: " << pmp << "; idx: "<< idx << "; way: " << way << "\n";
   return victim;
 }
 
