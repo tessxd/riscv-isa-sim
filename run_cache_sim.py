@@ -64,7 +64,7 @@ for cache_size in cache_sizes:
     results_rb_df = pd.DataFrame([[cache_size, ways, block_size/2, sets, float(miss_rate)]], columns=column_headers)
     data_rb_df = data_rb_df.append(results_rb_df, ignore_index=True)
 
-# TODO: plot outputs 
+
 print("Base line results")
 print data_bl_df
 print("Reduce sets by factor of 2")
@@ -72,27 +72,23 @@ print data_rs_df
 print("Reduce block size by factor of 2")
 print data_rb_df
 
-data = {'C':20, 'C++':15, 'Java':30,
-        'Python':35, 'Pytho':35, 'Pyth':35}
-Cache_size_list = ['256KB', '512KB', '1MB', '2MB', '4MB', '8MB']#list(data.keys())
-values = [35.55, 35.55, 35.0, 35.0, 35.0, 35.0] #list(data.values())
-
-print data_bl_df['Cache Size'].tolist()
-print data_bl_df['Miss Rate'].tolist()
+Cache_size_list = ['256KB', '512KB', '1MB', '2MB', '4MB', '8MB']
 
 fig5 = plt.figure()
 X_axis = np.arange(len(Cache_size_list))
-
 plt.bar(X_axis - 0.25, data_bl_df['Miss Rate'].tolist(), color='b', width=0.25, label='Baseline')
-plt.bar(X_axis, data_rs_df['Miss Rate'].tolist(), color='g', width=0.25, label='Reduce Block Size')
-plt.bar(X_axis + 0.25, data_rb_df['Miss Rate'].tolist(), color='purple', width=0.25, label='Reduce Sets')
+plt.bar(X_axis, data_rs_df['Miss Rate'].tolist(), color='g', width=0.25, label='Reduce Sets')
+plt.bar(X_axis + 0.25, data_rb_df['Miss Rate'].tolist(), color='purple', width=0.25, label='Reduce Block Size')
 plt.xticks(X_axis,Cache_size_list)
 plt.yticks(np.arange(0,95,step=5))
 plt.legend()
-plt.title('Experiment 1: L3 4-Way Area Neutral Simulation')
-plt.xlabel('Cache Size')
-plt.ylabel('L2 Miss Rates (%)')
-fig5.savefig('figure3.pdf')
+#plt.title('4-Way LLC Area Neutral Multi-Threaded Matrix Multiplication')
+#plt.title('4-Way LLC Area Neutral Multi-Threaded Vector Addition')
+#plt.title('Vector Addition with 4-Way L2 Cache', fontsize=16) 
+plt.title('Matrix Multiplication with 4-Way L2 Cache', fontsize=16)
+plt.xlabel('Cache Size', fontsize = 16)
+plt.ylabel('L2 Miss Rates (%)', fontsize = 16)
+fig5.savefig('mat-mult_experiment1.pdf')
 plt.close()
 
 # plt.figure()
